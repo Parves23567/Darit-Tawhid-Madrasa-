@@ -1,0 +1,67 @@
+{
+  "name": "দারুত তাওহীদ মাদ্রাসা ম্যানেজমেন্ট",
+  "short_name": "মাদ্রাসা অ্যাপ",
+  "description": "দারুত তাওহীদ ক্যাডেট মাদ্রাসা ম্যানেজমেন্ট সিস্টেম — ছাত্র, শিক্ষক, হাজিরা ও ফলাফল ব্যবস্থাপনা।",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f0fdf4",
+  "theme_color": "#15803d",
+  "orientation": "portrait-primary",
+  "lang": "bn",
+  "categories": ["education", "productivity"],
+  "icons": [
+    {
+      "src": "/icons/icon-72x72.png",
+      "sizes": "72x72",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-96x96.png",
+      "sizes": "96x96",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-128x128.png",
+      "sizes": "128x128",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icons/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "ড্যাশবোর্ড",
+      "short_name": "ড্যাশবোর্ড",
+      "description": "মূল ড্যাশবোর্ড",
+      "url": "/dashboard",
+      "icons": [{ "src": "/icons/icon-96x96.png", "sizes": "96x96" }]
+    },
+    {
+      "name": "ছাত্র তালিকা",
+      "short_name": "ছাত্র",
+      "description": "ছাত্র/ছাত্রী ব্যবস্থাপনা",
+      "url": "/students",
+      "icons": [{ "src": "/icons/icon-96x96.png", "sizes": "96x96" }]
+    },
+    {
+      "name": "হাজিরা",
+      "short_name": "হাজিরা",
+      "description": "দৈনিক হাজিরা নিন",
+      "url": "/attendance",
+      "icons": [{ "src": "/icons/icon-96x96.png", "sizes": "96x96" }]
+    }
+  ]
+}

@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="bn">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+
+    <!-- SEO Meta Tags -->
+    <title>দারুত তাওহীদ ক্যাডেট মাদ্রাসা ম্যানেজমেন্ট সিস্টেম</title>
+    <meta name="description" content="দারুত তাওহীদ ক্যাডেট মাদ্রাসা ম্যানেজমেন্ট সিস্টেম — ছাত্র, শিক্ষক, উপস্থিতি, ফলাফল ও ফি ব্যবস্থাপনা।" />
+    <meta name="keywords" content="মাদ্রাসা, ম্যানেজমেন্ট, দারুত তাওহীদ, রাজশাহী, শিক্ষা" />
+    <meta name="author" content="দারুত তাওহীদ ক্যাডেট মাদ্রাসা" />
+
+    <!-- PWA Meta Tags -->
+    <meta name="theme-color" content="#15803d" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="মাদ্রাসা অ্যাপ" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="application-name" content="মাদ্রাসা অ্যাপ" />
+    <meta name="msapplication-TileColor" content="#15803d" />
+
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="/manifest.json" />
+
+    <!-- Favicon & Icons -->
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="apple-touch-icon" sizes="192x192" href="/icons/icon-192x192.png" />
+    <link rel="apple-touch-icon" sizes="512x512" href="/icons/icon-512x512.png" />
+
+    <!-- Google Fonts: Bangla -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@300;400;500;600;700&family=Noto+Sans+Bengali:wght@300;400;500;600;700&family=Amiri:ital,wght@0,400;0,700;1,400&display=swap"
+      rel="stylesheet"
+    />
+
+    <!-- Open Graph -->
+    <meta property="og:title" content="দারুত তাওহীদ ক্যাডেট মাদ্রাসা ম্যানেজমেন্ট" />
+    <meta property="og:description" content="সম্পূর্ণ মাদ্রাসা ম্যানেজমেন্ট সিস্টেম" />
+    <meta property="og:type" content="website" />
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+
+    <!-- PWA Service Worker Registration -->
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker
+            .register('/sw.js')
+            .then((reg) => console.log('[SW] Registered:', reg.scope))
+            .catch((err) => console.warn('[SW] Registration failed:', err));
+        });
+      }
+    </script>
+  </body>
+</html>
