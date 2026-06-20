@@ -1,10 +1,11 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   MdPeople, MdAdd, MdSearch, MdEdit, MdDelete, MdClose,
   MdPhone, MdEmail, MdVisibility, MdWork
 } from 'react-icons/md';
-import { SAMPLE_TEACHERS } from '../../utils/sampleData';
 import { CLASS_NAMES, CLASS_OPTIONS, formatTaka } from '../../utils/helpers';
+import { subscribeToCollection, addDocument, updateDocument, deleteDocument } from '../../firebase/firestore';
+import { useApp } from '../../context/AppContext';
 
 const DESIGNATIONS = [
   'প্রধান শিক্ষক', 'সহকারী শিক্ষক', 'সহকারী শিক্ষিকা',
@@ -17,22 +18,25 @@ const EMPTY_FORM = {
   subjects: '', status: 'active',
 };
 
-function Avatar({ name }) {
-  return (
-    <div className="w-10 h-10 rounded-full bg-green-100 text-green-700 flex items-center justify-center font-bold text-sm flex-shrink-0">
-      {name?.charAt(0) || '?'}
-    </div>
-  );
-}
-
 export default function Teachers() {
-  const [teachers, setTeachers] = useState(SAMPLE_TEACHERS);
+  const { showNotification } = useApp();
+  const [teachers, setTeachers] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [editData, setEditData] = useState(null);
   const [form, setForm] = useState(EMPTY_FORM);
   const [viewTeacher, setViewTeacher] = useState(null);
   const [deleteConfirm, setDeleteConfirm] = useState(null);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    const unsubscribe = subscribeToCollection('teachers', (data) => {
+      setTeachers(data);
+      setLoading(false);
+    });
+    return () => unsubscribe();
+  }, []);
 
   const filtered = useMemo(() => teachers.filter(t => {
     const q = search.toLowerCase();
@@ -44,22 +48,49 @@ export default function Teachers() {
     setForm({ ...t, subjects: Array.isArray(t.subjects) ? t.subjects.join(', ') : t.subjects });
     setEditData(t); setShowModal(true);
   };
-  const closeModal = () => setShowModal(false);
+  const closeModal = () => { setShowModal(false); setSaving(false); };
   const f = (field, val) => setForm(p => ({ ...p, [field]: val }));
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!form.name.trim()) return alert('নাম প্রয়োজন');
-    const data = { ...form, subjects: form.subjects.split(',').map(s => s.trim()).filter(Boolean) };
-    if (editData) {
-      setTeachers(prev => prev.map(t => t.id === editData.id ? { ...t, ...data } : t));
-    } else {
-      const newId = `TCH${String(teachers.length + 1).padStart(3, '0')}`;
-      setTeachers(prev => [...prev, { ...data, id: newId, photo: null }]);
+    setSaving(true);
+    try {
+      const data = { ...form, subjects: form.subjects.split(',').map(s => s.trim()).filter(Boolean) };
+      if (editData) {
+        const { id, ...rest } = data;
+        await updateDocument('teachers', editData.id, rest);
+        showNotification('শিক্ষকের তথ্য আপডেট হয়েছে ✅');
+      } else {
+        await addDocument('teachers', data);
+        showNotification('নতুন শিক্ষক যোগ হয়েছে ✅');
+      }
+      setShowModal(false);
+    } catch (err) {
+      showNotification('সংরক্ষণ করতে সমস্যা হয়েছে ❌', 'error');
     }
-    setShowModal(false);
+    setSaving(false);
   };
 
-  const handleDelete = (id) => { setTeachers(prev => prev.filter(t => t.id !== id)); setDeleteConfirm(null); };
+  const handleDelete = async (id) => {
+    try {
+      await deleteDocument('teachers', id);
+      showNotification('শিক্ষকের তথ্য মুছে ফেলা হয়েছে ✅');
+    } catch (err) {
+      showNotification('মুছতে সমস্যা হয়েছে ❌', 'error');
+    }
+    setDeleteConfirm(null);
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center">
+          <div className="w-12 h-12 border-4 border-green-600 border-t-transparent rounded-full animate-spin mx-auto mb-3"></div>
+          <p className="text-gray-500">লোড হচ্ছে...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -76,8 +107,8 @@ export default function Teachers() {
         {[
           { label: 'মোট শিক্ষক', val: teachers.length, bg: 'bg-green-50 text-green-700' },
           { label: 'সক্রিয়', val: teachers.filter(t => t.status === 'active').length, bg: 'bg-blue-50 text-blue-700' },
-          { label: 'পুরুষ', val: teachers.filter(t => !t.name?.includes('মোছাঃ')).length, bg: 'bg-purple-50 text-purple-700' },
-          { label: 'মহিলা', val: teachers.filter(t => t.name?.includes('মোছাঃ')).length, bg: 'bg-pink-50 text-pink-700' },
+          { label: 'পুরুষ', val: teachers.filter(t => t.gender === 'male' || !t.gender).length, bg: 'bg-purple-50 text-purple-700' },
+          { label: 'মহিলা', val: teachers.filter(t => t.gender === 'female').length, bg: 'bg-pink-50 text-pink-700' },
         ].map(s => (
           <div key={s.label} className={`card py-4 text-center ${s.bg}`}>
             <p className="text-2xl font-bold">{s.val}</p>
@@ -94,48 +125,59 @@ export default function Teachers() {
         </div>
       </div>
 
+      {/* Empty State */}
+      {teachers.length === 0 && (
+        <div className="card text-center py-16">
+          <MdPeople size={48} className="text-gray-300 mx-auto mb-3" />
+          <p className="text-gray-400 text-lg">এখনো কোনো শিক্ষক যোগ করা হয়নি</p>
+          <button onClick={openAdd} className="btn-primary mt-4"><MdAdd size={18} /> প্রথম শিক্ষক যোগ করুন</button>
+        </div>
+      )}
+
       {/* Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {filtered.length === 0 && <div className="col-span-3 text-center text-gray-400 py-12">কোনো শিক্ষক পাওয়া যায়নি</div>}
-        {filtered.map(t => (
-          <div key={t.id} className="card hover:-translate-y-1 transition-transform duration-200">
-            <div className="flex items-start gap-4">
-              <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-green-400 to-green-700 flex items-center justify-center text-white text-xl font-bold flex-shrink-0">
-                {t.name?.charAt(0)}
+      {teachers.length > 0 && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {filtered.length === 0 && <div className="col-span-3 text-center text-gray-400 py-12">কোনো শিক্ষক পাওয়া যায়নি</div>}
+          {filtered.map(t => (
+            <div key={t.id} className="card hover:-translate-y-1 transition-transform duration-200">
+              <div className="flex items-start gap-4">
+                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-green-400 to-green-700 flex items-center justify-center text-white text-xl font-bold flex-shrink-0">
+                  {t.name?.charAt(0)}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h3 className="font-bold text-gray-800 truncate">{t.name}</h3>
+                  <p className="text-green-700 text-sm font-medium">{t.designation}</p>
+                  <div className="flex items-center gap-1 text-xs text-gray-400 mt-1">
+                    <MdWork size={12} /> {CLASS_NAMES[t.assignedClass] || '—'}
+                  </div>
+                </div>
+                <span className={`badge ${t.status === 'active' ? 'badge-success' : 'badge-danger'}`}>
+                  {t.status === 'active' ? 'সক্রিয়' : 'নিষ্ক্রিয়'}
+                </span>
               </div>
-              <div className="flex-1 min-w-0">
-                <h3 className="font-bold text-gray-800 truncate">{t.name}</h3>
-                <p className="text-green-700 text-sm font-medium">{t.designation}</p>
-                <div className="flex items-center gap-1 text-xs text-gray-400 mt-1">
-                  <MdWork size={12} /> {CLASS_NAMES[t.assignedClass] || '—'}
+
+              <div className="mt-4 space-y-1.5 text-sm text-gray-600">
+                <div className="flex items-center gap-2"><MdPhone size={14} className="text-gray-400" /> {t.phone || '—'}</div>
+                <div className="flex items-center gap-2"><MdEmail size={14} className="text-gray-400" /> {t.email || '—'}</div>
+                {t.subjects?.length > 0 && (
+                  <div className="flex flex-wrap gap-1 mt-2">
+                    {t.subjects.map(s => <span key={s} className="badge badge-info text-xs">{s}</span>)}
+                  </div>
+                )}
+              </div>
+
+              <div className="flex items-center gap-2 mt-4 pt-4 border-t border-gray-100">
+                <span className="text-sm font-semibold text-gray-700">{formatTaka(t.salary)}/মাস</span>
+                <div className="flex gap-1 ml-auto">
+                  <button onClick={() => setViewTeacher(t)} className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg"><MdVisibility size={16} /></button>
+                  <button onClick={() => openEdit(t)} className="p-1.5 text-green-700 hover:bg-green-50 rounded-lg"><MdEdit size={16} /></button>
+                  <button onClick={() => setDeleteConfirm(t)} className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg"><MdDelete size={16} /></button>
                 </div>
               </div>
-              <span className={`badge ${t.status === 'active' ? 'badge-success' : 'badge-danger'}`}>
-                {t.status === 'active' ? 'সক্রিয়' : 'নিষ্ক্রিয়'}
-              </span>
             </div>
-
-            <div className="mt-4 space-y-1.5 text-sm text-gray-600">
-              <div className="flex items-center gap-2"><MdPhone size={14} className="text-gray-400" /> {t.phone}</div>
-              <div className="flex items-center gap-2"><MdEmail size={14} className="text-gray-400" /> {t.email || '—'}</div>
-              {t.subjects?.length > 0 && (
-                <div className="flex flex-wrap gap-1 mt-2">
-                  {t.subjects.map(s => <span key={s} className="badge badge-info text-xs">{s}</span>)}
-                </div>
-              )}
-            </div>
-
-            <div className="flex items-center gap-2 mt-4 pt-4 border-t border-gray-100">
-              <span className="text-sm font-semibold text-gray-700">{formatTaka(t.salary)}/মাস</span>
-              <div className="flex gap-1 ml-auto">
-                <button onClick={() => setViewTeacher(t)} className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg"><MdVisibility size={16} /></button>
-                <button onClick={() => openEdit(t)} className="p-1.5 text-green-700 hover:bg-green-50 rounded-lg"><MdEdit size={16} /></button>
-                <button onClick={() => setDeleteConfirm(t)} className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg"><MdDelete size={16} /></button>
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
 
       {/* Add/Edit Modal */}
       {showModal && (
@@ -172,7 +214,9 @@ export default function Teachers() {
             </div>
             <div className="flex justify-end gap-3 px-6 pb-6">
               <button onClick={closeModal} className="btn-secondary">বাতিল</button>
-              <button onClick={handleSave} className="btn-primary">{editData ? 'আপডেট করুন' : 'সংরক্ষণ করুন'}</button>
+              <button onClick={handleSave} disabled={saving} className="btn-primary">
+                {saving ? 'সংরক্ষণ হচ্ছে...' : editData ? 'আপডেট করুন' : 'সংরক্ষণ করুন'}
+              </button>
             </div>
           </div>
         </div>
